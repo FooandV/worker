@@ -41,9 +41,7 @@ public class KafkaOrderConsumer {
     public void consume(String message) {
         System.out.println("Pedido recibido:" + message);
         try {
-            // convertimos  el mensaje JSON en un objeto OrderMessage
             OrderMessage orderMessage = objectMapper.readValue(message, OrderMessage.class);
-            // Procesa el pedido utilizando el servicio de procesamiento de pedidos
             orderProcessorService.processOrder(orderMessage)
                     .subscribe(savedOrder -> {
                         System.out.println("Pedido almacenado en MongoDB con ID: " + savedOrder.getId());

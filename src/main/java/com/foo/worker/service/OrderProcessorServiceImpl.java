@@ -10,34 +10,25 @@ import com.foo.worker.models.ProductDetails;
 import reactor.core.publisher.Mono;
 
 /**
- * OrderProcessorServiceImpl: Esta clase se encarga de procesar los mensajes de
- * pedidos(orders) recibidos de Kafka.
- * Realiza el enriquecimiento de datos de clientes y productos llamando a servicios externos (APIs de Go)
- * y almacena los pedidos en una base de datos MongoDB.
+ * OrderProcessorServiceImpl: Procesa los mensajes de pedidos recibidos de Kafka.
  * 
- * Responsabilidades:
- * - Recibir el mensaje de pedido desde Kafka.
- * - Enriquecer los datos del cliente y el producto utilizando APIs externas.
- * - Validar los datos recibidos.
- * - Almacenar el pedido en MongoDB.
- * - Manejar la concurrencia usando Redis para evitar que el mismo pedido sea
- * procesado dos veces.
- * 
- * Dependencias:
- * - EnrichmentService: Servicio para conectar y enriquecer los datos del
- * cliente y producto.
- * - OrderMongoStorageService: Servicio para almacenar pedidos en MongoDB.
- * - RedisLockService: Servicio para gestionar el bloqueo de pedidos utilizando
- * Redis.
+ * Funcionalidad principal:
+ * - Enriquecimiento de datos de clientes y productos a través de APIs externas (Go).
+ * - Almacenamiento de pedidos enriquecidos en MongoDB.
+ * - Gestión de concurrencia con Redis para evitar procesamiento duplicado.
  * 
  * Manejo de Errores:
- * - Se realizan reintentos cuando fallan las llamadas a las APIs externas
- * utilizando Resilience4j.
- * - Se manejan locks distribuidos para evitar la duplicidad de procesamiento.
+ * - Reintentos automáticos con Resilience4j para fallos en las APIs.
+ * - Uso de locks distribuidos en Redis para asegurar procesamiento único de pedidos.
+ * 
+ * Dependencias:
+ * - EnrichmentService: Enriquecimiento de datos de clientes y productos.
+ * - OrderStorageService: Almacenamiento en MongoDB.
+ * - RedisLockService: Gestión de locks con Redis.
  * 
  * @author Freyder Otalvaro
- * @version 1.0
- * @since 2024-10-18
+ * @version 1.2
+ * @since 2024-10-19
  */
 @Service
 public class OrderProcessorServiceImpl implements OrderProcessorService {

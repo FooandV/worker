@@ -8,22 +8,19 @@ import java.time.Duration;
 import reactor.core.publisher.Mono;
 
 /**
- * RedisLockServiceImpl: Implementación del servicio que gestiona locks (bloqueos) distribuidos utilizando Redis.
- * Este servicio asegura que solo una instancia del worker procese un pedido en particular al mismo tiempo.
+ * RedisLockServiceImpl: Implementa la gestión de locks distribuidos en Redis para asegurar que
+ * solo una instancia procese un pedido a la vez.
  * 
- * Responsabilidades:
- * - Gestionar el bloqueo y liberación de locks para pedidos utilizando Redis.
- * - Prevenir que múltiples instancias procesen el mismo pedido simultáneamente.
+ * Funcionalidad principal:
+ * - Adquisición y liberación de locks utilizando Redis.
+ * - Prevención del procesamiento simultáneo de un mismo pedido.
  * 
- * Dependencias:
- * - ReactiveRedisTemplate: Utiliza Redis como almacenamiento distribuido para gestionar los locks.
- * 
- * Detalles de Implementación:
- * - Los locks se manejan usando claves en Redis con el prefijo `lock_order:<orderId>`.
- * - Cada lock tiene un tiempo de expiración definido para evitar bloqueos eternos.
+ * Detalles:
+ * - Los locks(Bloqueos) usan claves en Redis con el formato `lock_order:<orderId>`.
+ * - Cada lock tiene un tiempo de expiración para evitar bloqueos prolongados.
  * 
  * Manejo de Errores:
- * - En caso de fallos de conexión a Redis, se devuelve un `Mono.error` para evitar que el sistema falle silenciosamente.
+ * - Si falla la conexión a Redis, se devuelve un `Mono.error`.
  * 
  * @author Freyder Otalvaro
  * @version 1.0
@@ -62,7 +59,6 @@ public class RedisLockServiceImpl implements RedisLockService {
                                 .thenReturn(true); // Lock adquirido exitosamente
                     } else {
                         System.out.println("No se pudo adquirir el lock para el pedido: " + orderId);
-                        // Si no se pudo adquirir el lock, retorna false.
                         return Mono.just(false);
                     }
                 });
@@ -77,16 +73,13 @@ public class RedisLockServiceImpl implements RedisLockService {
     @Override
     public Mono<Boolean> releaseLock(String orderId) {
         if (orderId == null) {
-            // Evitar un error en caso de que se pase un valor nulo
             return Mono.just(false);
         }
-        // Eliminar el lock(bloqueo) en Redis cuando ya no se necesita (cuando se termina de
-        // procesar el pedido)
+        
         return redisTemplate.delete("lock_order:" + orderId)
-            .map(deleted -> deleted > 0) // Retorna true si se eliminó el lock, false en caso contrario
-            .defaultIfEmpty(false) // Retorna false si la operación no produce un resultado
+            .map(deleted -> deleted > 0) 
+            .defaultIfEmpty(false) 
             .onErrorResume(e -> {
-                // Manejar cualquier error que ocurra en la eliminación del lock
                 return Mono.just(false);
             });
     }

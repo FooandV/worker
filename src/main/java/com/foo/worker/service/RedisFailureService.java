@@ -11,7 +11,6 @@ import reactor.core.publisher.Mono;
  * junto con el número de intentos en Redis.
  * 
  * Este servicio se encarga de:
- * 
  * - Almacenar un pedido fallido en Redis cuando el procesamiento del pedido no tiene éxito, junto con un contador de intentos.
  * - Recuperar el mensaje del pedido fallido y el número de intentos desde Redis para su posterior análisis o reintento.
  * Métodos principales:
@@ -29,23 +28,19 @@ public class RedisFailureService {
         this.redisTemplate = redisTemplate;
     }
 
-    // Almacena un mensaje fallido junto con el número de intentos
     public Mono<Boolean> storeFailedMessage(String orderId, String message, int attempt) {
-        // Almacena el mensaje fallido con su clave y luego almacena el número de
-        // intentos
+        
         return redisTemplate.opsForValue().set("failed_order:" + orderId, message)
                 .flatMap(result -> redisTemplate.opsForValue().set("failed_attempts:" + orderId,
                         String.valueOf(attempt)));
     }
 
-    // Recupera el mensaje fallido desde Redis
     public Mono<String> getFailedMessage(String orderId) {
         return redisTemplate.opsForValue().get("failed_order:" + orderId);
     }
 
-    // Recupera el conteo de intentos desde Redis
     public Mono<Integer> getAttemptCount(String orderId) {
         return redisTemplate.opsForValue().get("failed_attempts:" + orderId)
-                .map(Integer::parseInt); // corvertimos la cadena a un número
+                .map(Integer::parseInt); 
     }
 }
