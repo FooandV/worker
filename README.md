@@ -51,6 +51,7 @@ Este proyecto incluye dos APIs de prueba desarrolladas en Go para enriquecer los
 Si no tienes las dependencias instaladas, puedes hacer lo siguiente:
 
 - Para MongoDB y Redis:
+  
 
 sudo apt install mongodb redis
 
@@ -60,12 +61,16 @@ Si aún no tienes Go instalado, puedes seguir las instrucciones de instalación 
 ## Configuración del Proyecto
 
 - Clona el repositorio desde GitHub:
+  
 git clone https://github.com/FooandV/worker.git
+
 cd worker
 
 - Configuración de Propiedades
-Configura las propiedades en el archivo src/main/resources/application.properties según tu entorno local.
+Configura las propiedades en el archivo:
+ src/main/resources/application.properties según tu entorno local.
 Por ejemplo:
+
 # Configuración de Kafka
 spring.kafka.bootstrap-servers=localhost:9092
 spring.kafka.consumer.group-id=order_group
@@ -82,7 +87,7 @@ Asegúrate de que Kafka, MongoDB, Redis y GO estén ejecutándose en tu máquina
 ## Ejecución del Proyecto
 Sigue estos pasos para ejecutar la aplicación:
 
-- 1- Inicia los servicios de Kafka, MongoDB, Redis y GO.
+1- Inicia los servicios de Kafka, MongoDB, Redis y GO.
 
 * Para MongoDB:
 sudo service mongod start
@@ -91,16 +96,21 @@ sudo service mongod start
 sudo service redis-server start
 
 * Para Kafka, asegúrate de que el servidor Kafka esté activo y que el tópico "orders" esté creado:
+  
 kafka-topics.sh --create --topic orders --bootstrap-server localhost:9092
 
-- 2- Ejecutar la Aplicación. Desde el directorio raíz del proyecto, usa Maven o cualquier otro IDE para ejecutar el proyecto:
+2- Ejecutar la Aplicación. 
+Desde el directorio raíz del proyecto, usa Maven o cualquier otro IDE para ejecutar el proyecto:
+
 mvn spring-boot:run
 
 O si prefieres, puedes ejecutar la clase principal:
+
 java -jar target/order-worker-0.0.1-SNAPSHOT.jar
 
-- 3- Navega al directorio donde se encuentran las APIs (.\go-api).
-Ejecuta el siguiente comando para iniciar el servidor:
+3- Navega al directorio donde se encuentran las APIs (.\go-api).
+Ejecuta el siguiente comando para iniciar el servidor de GO:
+
 go run main.go
 
 Esto iniciará las APIs en http://localhost:8081
