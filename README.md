@@ -135,7 +135,7 @@ Las APIs son las siguientes:
   ]
 }
 
-El flujo completo incluirá la recepción de este mensaje en el tópico de Kafka, su procesamiento por la aplicación Java, y el enriquecimiento de los datos del cliente y producto utilizando las APIs de Go
+El flujo completo incluirá la recepción de este mensaje en el tópico de Kafka, su procesamiento por la aplicación Java, y el enriquecimiento de los datos del cliente y producto utilizando las APIs de Go, para luego la información ser almacenada en Mongo en Redis segun sea el caso
 
 ## Pruebas Unitarias
 Las pruebas unitarias están implementadas con JUnit 5 y Mockito. Para ejecutarlas:
