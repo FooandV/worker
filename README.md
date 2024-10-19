@@ -31,7 +31,8 @@ El sistema utiliza los siguientes componentes:
 - **MongoDB** (Base de datos NoSQL): Para almacenar los pedidos enriquecidos.
 - **Resilience4j** (Manejo de reintentos y circuit breakers)
 - **Go** (APIs externas para enriquecer datos de clientes y productos)
-- **Docker** (para correr instancias de Kafka, Redis y MongoDB)
+- **Docker** (para correr instancias de Kafka, Redis y MongoDB)Pendiente, aun no se ha dockerizado
+  
 - **JUnit 5 y Mockito** (para pruebas unitarias)
 
 
@@ -150,7 +151,8 @@ Se han cubierto los siguientes escenarios de prueba:
 
 ## Optimización y Escalabilidad
 - Índices en MongoDB
-El sistema utiliza índices en los campos orderId y customerId para optimizar las consultas a MongoDB. Estos índices se crean automáticamente al iniciar la aplicación
+El sistema utiliza índices en los campos orderId y customerId para optimizar las consultas a MongoDB. Estos índices se crean automáticamente al iniciar la aplicación.
+se ejecuta el siguiente comando para validar los indices en Mongo:
 
 db.orders.getIndexes()
 
@@ -159,5 +161,4 @@ Para reducir la carga de las APIs externas, los datos de cliente y producto se a
 
 - Caché y Resiliencia
 Se utiliza Resilience4j para manejar los reintentos automáticos y circuit breakers. El sistema está diseñado para ser resiliente a fallos en las APIs externas, asegurando reintentos exponenciales en caso de errores temporales.
-
 El caché de Redis almacena información de clientes y productos para reducir las llamadas a las APIs y optimizar el rendimiento
