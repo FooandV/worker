@@ -10,21 +10,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foo.worker.models.CustomerDetails;
 import com.foo.worker.models.OrderMessage;
 import com.foo.worker.models.ProductDetails;
+
 import java.time.Duration;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.retry.annotation.Retry; // Resilience4j
+import io.github.resilience4j.retry.annotation.Retry;
 
 import reactor.core.publisher.Mono;
 
 /**
- * EnrichmentServiceImpl: Implementación de la interfaz EnrichmentService que se
- * encarga de realizar las llamadas HTTP a las APIs externas (implementadas en Go) para
- * obtener datos enriquecidos de clientes y productos.
- * - Realizar solicitudes HTTP a las APIs de Go para obtener los detalles de
- * clientes y productos.
- * - Manejar reintentos automáticos en caso de errores en las llamadas, utilizando Resilience4j.
- * - Proveer métodos de fallback ""opción de respaldo"" en caso de que las solicitudes fallen después de varios reintentos.
+ * EnrichmentServiceImpl: Implementation of the EnrichmentService interface responsible for making HTTP calls
+ * to external APIs (developed in Go) in order to enrich orders with detailed customer and product data.
+ * 
+ * Responsibilities:
+ * - Perform HTTP requests to Go APIs to retrieve customer and product information.
+ * - Handle automatic retries using Resilience4j in case of request failures.
+ * - Provide fallback methods when retry attempts are exhausted.
+ * - Cache enriched responses in Redis to improve performance.
+ * 
  * @author Freyder Otalvaro
  * @version 1.0
  * @since 2024-10-18
@@ -36,17 +39,18 @@ public class EnrichmentServiceImpl implements EnrichmentService {
     private final ReactiveRedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    
     public EnrichmentServiceImpl(WebClient.Builder webClientBuilder,
                                  @Qualifier("reactiveRedisTemplate") ReactiveRedisTemplate<String, String> redisTemplate) {
         this.webClient = webClientBuilder.baseUrl("http://localhost:8081").build();
         this.redisTemplate = redisTemplate;
     }
+
     /**
-     * enrichCustomer: Realiza una solicitud HTTP a la API de Go para enriquecer los
-     * datos del cliente, incluyendo un mecanismo de reintento en caso de fallo.
-     * @param orderMessage El mensaje del pedido que contiene el ID del cliente.
-     * @return Mono<CustomerDetails> Un flujo reactivo que contiene los detalles del  cliente.
+     * Enriches customer data by calling the Go-based API and applying retry mechanisms.
+     * If the data is found in Redis, it is returned from the cache.
+     *
+     * @param orderMessage The order message containing the customer ID.
+     * @return Mono<CustomerDetails> with enriched customer data.
      */
     @Override
     @Retry(name = "customerRetry", fallbackMethod = "fallbackCustomer")
@@ -57,9 +61,9 @@ public class EnrichmentServiceImpl implements EnrichmentService {
                 .flatMap(cachedCustomer -> {
                     try {
                         CustomerDetails customer = objectMapper.readValue(cachedCustomer, CustomerDetails.class);
-                        return Mono.just(customer); // Devuelve el cliente cacheado
+                        return Mono.just(customer); // Return cached customer
                     } catch (Exception e) {
-                        return Mono.error(new RuntimeException("Error al deserializar cliente cacheado"));
+                        return Mono.error(new RuntimeException("Error deserializing cached customer"));
                     }
                 })
                 .switchIfEmpty(
@@ -75,9 +79,15 @@ public class EnrichmentServiceImpl implements EnrichmentService {
                                                 .set(customerCacheKey, serializedCustomer)
                                                 .thenReturn(customer))))
                 .doOnError(error -> System.err
-                        .println("Error al enriquecer los datos del cliente: " + error.getMessage()));
+                        .println("Error enriching customer data: " + error.getMessage()));
     }
 
+    /**
+     * Enriches customer data using Reactor's retry strategy (without Resilience4j).
+     *
+     * @param orderMessage The order message containing the customer ID.
+     * @return Mono<CustomerDetails> with enriched data.
+     */
     @Override
     public Mono<CustomerDetails> enrichCustomerWithReactor(OrderMessage orderMessage) {
         return webClient.get()
@@ -91,14 +101,14 @@ public class EnrichmentServiceImpl implements EnrichmentService {
                         .maxBackoff(Duration.ofSeconds(10))
                         .jitter(0.5))
                 .doOnError(error -> System.err
-                        .println("Error al enriquecer los datos del cliente con Reactor: " + error.getMessage()));
+                        .println("Error enriching customer data with Reactor: " + error.getMessage()));
     }
 
     /**
-     * enrichProduct: Realiza una solicitud HTTP a la API de Go para enriquecer los
-     * datos del producto, incluyendo un mecanismo de reintento en caso de fallo.
-     * @param orderMessage El mensaje del pedido que contiene los detalles del
-     * @return Mono<ProductDetails> Un flujo reactivo que contiene los detalles del producto.
+     * Enriches product data from the Go-based API and caches it in Redis.
+     * 
+     * @param orderMessage The order message containing the product ID.
+     * @return Mono<ProductDetails> with enriched product data.
      */
     @Override
     @Retry(name = "productRetry", fallbackMethod = "fallbackProduct")
@@ -106,13 +116,12 @@ public class EnrichmentServiceImpl implements EnrichmentService {
     public Mono<ProductDetails> enrichProductWithResilience(OrderMessage orderMessage) {
         String productCacheKey = "product:" + orderMessage.getProducts().get(0).getProductId();
 
-        // Intentar obtener el producto del caché (Redis)
         return redisTemplate.opsForValue().get(productCacheKey)
                 .flatMap(cachedProduct -> {
                     try {
                         return Mono.just(objectMapper.readValue(cachedProduct, ProductDetails.class));
                     } catch (JsonProcessingException e) {
-                        return Mono.error(new RuntimeException("Error al deserializar el producto desde caché."));
+                        return Mono.error(new RuntimeException("Error deserializing cached product"));
                     }
                 })
                 .switchIfEmpty(
@@ -120,26 +129,17 @@ public class EnrichmentServiceImpl implements EnrichmentService {
                                 .uri("/product")
                                 .retrieve()
                                 .bodyToMono(ProductDetails.class)
-                                .flatMap(product -> {
-                                    // Almacenar el producto en caché después de obtenerlo de la API
-                                    return Mono.fromCallable(() -> objectMapper.writeValueAsString(product))
-                                            .flatMap(serializedProduct -> redisTemplate.opsForValue()
-                                                    .set(productCacheKey, serializedProduct))
-                                            .thenReturn(product); 
-                                })
+                                .flatMap(product ->
+                                        Mono.fromCallable(() -> objectMapper.writeValueAsString(product))
+                                                .flatMap(serializedProduct -> redisTemplate.opsForValue()
+                                                        .set(productCacheKey, serializedProduct))
+                                                .thenReturn(product))
                                 .doOnError(error -> {
-                                    System.err.println(
-                                            "Error al enriquecer los datos del producto: " + error.getMessage());
+                                    System.err.println("Error enriching product data: " + error.getMessage());
                                 }));
     }
 
-    public Mono<CustomerDetails> fallbackCustomer(OrderMessage orderMessage, Throwable t) {
-        System.err.println("Fallo en el enriquecimiento de cliente después de reintentos: " + t.getMessage());
-        return Mono.error(new RuntimeException("No se pudo enriquecer el cliente después de varios intentos."));
-    }
-
-    public Mono<ProductDetails> fallbackProduct(OrderMessage orderMessage, Throwable t) {
-        System.err.println("Fallo en el enriquecimiento de producto después de reintentos: " + t.getMessage());
-        return Mono.error(new RuntimeException("No se pudo enriquecer el producto después de varios intentos."));
-    }
-}
+    /**
+     * Fallback method for customer enrichment in case retries fail.
+     */
+    public Mono<CustomerDetails> fallbackCustomer(Order
