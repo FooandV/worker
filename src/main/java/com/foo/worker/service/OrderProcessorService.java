@@ -7,13 +7,14 @@ import com.foo.worker.models.ProductDetails;
 
 import reactor.core.publisher.Mono;
 
-/*
- * Esta clase es responsable de procesar el pedido después de recibir el mensaje 
- * y enriquecerlo con datos adicionales
+/**
+ * OrderProcessorService: Interface responsible for processing an order 
+ * after receiving the message and enriching it with additional data.
  */
 public interface OrderProcessorService {
 
     Mono<Order> processOrder(OrderMessage orderMessage);
+
     Order createEnrichedOrder(OrderMessage orderMessage, CustomerDetails customer, ProductDetails product);
 
 }
