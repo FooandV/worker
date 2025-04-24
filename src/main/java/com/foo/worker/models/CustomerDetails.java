@@ -5,8 +5,8 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 /**
- * CustomerDetails: Representa los detalles de un cliente
- * Clase que mapea el Customer de la API que viene de GO
+ * CustomerDetails: Represents the details of a customer.
+ * This class maps the Customer object received from the external Go API.
  */
 @Data
 @NoArgsConstructor
