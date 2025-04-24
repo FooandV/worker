@@ -5,11 +5,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * ProductDetails: Esta clase representa los detalles de un producto, obtenidos de la API externa
- * desarrollada en Go. Los datos incluyen información clave sobre el producto,
- * como su identificador, nombre, descripción y precio.
- * Se utiliza para enriquecer los pedidos que llegan desde Kafka con información
- * detallada sobre los productos involucrados en el pedido.
+ * ProductDetails: This class represents detailed product information retrieved 
+ * from an external Go-based API. It includes key data about the product such as 
+ * its identifier, name, description, and price.
+ * 
+ * It is used to enrich incoming orders from Kafka with detailed information
+ * about the products included in the order.
  */
 @Data
 @NoArgsConstructor
