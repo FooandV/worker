@@ -8,17 +8,23 @@ import com.foo.worker.repository.OrderRepository;
 
 import reactor.core.publisher.Mono;
 
-/*
- *  guardar el pedido enriquecido en MongoDB
+/**
+ * OrderStorageServiceImpl: Service implementation responsible for storing 
+ * enriched orders into MongoDB using a reactive repository.
  */
 @Service
-public class OrderStorageServiceImpl implements OrderStorageService  {
+public class OrderStorageServiceImpl implements OrderStorageService {
 
     @Autowired
     private OrderRepository orderRepository;
 
-
-    // Guardar el pedido enriquecido en MongoDB
+    /**
+     * Saves the enriched order into MongoDB.
+     *
+     * @param order The enriched order to be persisted.
+     * @return Mono<Order> representing the saved order.
+     */
+    @Override
     public Mono<Order> saveOrder(Order order) {
         return orderRepository.save(order);
     }
