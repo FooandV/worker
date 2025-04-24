@@ -11,10 +11,11 @@ import com.foo.worker.service.RedisFailureService;
 import reactor.core.publisher.Mono;
 
 /**
- * KafkaOrderConsumer: Esta clase se encarga de consumir los mensajes de pedidos 
- * desde un tópico de Kafka. Procesa los mensajes recibidos, los enriquece con información adicional 
- * sobre el cliente y los productos utilizando las APIs externas de GO, y almacena los pedidos procesados 
- * en MongoDB. En caso de que el pedido falle, maneja los intentos fallidos y los almacena en Redis para reintentos futuros.
+ * KafkaOrderConsumer: This class is responsible for consuming order messages 
+ * from a Kafka topic. It processes the received messages, enriches them with additional 
+ * customer and product data using external Go APIs, and stores the processed orders 
+ * in MongoDB. If processing fails, it handles retries and stores failed messages 
+ * in Redis for future attempts.
  */
 @Service
 public class KafkaOrderConsumer {
@@ -24,9 +25,9 @@ public class KafkaOrderConsumer {
     private final ObjectMapper objectMapper = new ObjectMapper(); 
 
     /**
-     * Constructor de KafkaOrderConsumer.
-     * @param orderProcessorService Servicio que se encarga del procesamiento y almacenamiento del pedido.
-     * @param redisFailureService Servicio que maneja el almacenamiento y la recuperación de mensajes fallidos en Redis.
+     * KafkaOrderConsumer constructor.
+     * @param orderProcessorService Service responsible for processing and saving orders.
+     * @param redisFailureService Service responsible for managing failed messages in Redis.
      */
     public KafkaOrderConsumer(OrderProcessorService orderProcessorService, RedisFailureService redisFailureService) {
         this.orderProcessorService = orderProcessorService;
@@ -34,44 +35,30 @@ public class KafkaOrderConsumer {
     }
 
     /**
-     * Método que escucha los mensajes del tópico "orders" de Kafka.
-     * @param message El mensaje recibido desde Kafka en formato JSON.
+     * Listens to messages from the "orders" Kafka topic.
+     * @param message The incoming message in JSON format.
      */
     @KafkaListener(topics = "orders", groupId = "order_group")
     public void consume(String message) {
-        System.out.println("Pedido recibido:" + message);
+        System.out.println("Order received: " + message);
         try {
             OrderMessage orderMessage = objectMapper.readValue(message, OrderMessage.class);
             orderProcessorService.processOrder(orderMessage)
                     .subscribe(savedOrder -> {
-                        System.out.println("Pedido almacenado en MongoDB con ID: " + savedOrder.getId());
+                        System.out.println("Order stored in MongoDB with ID: " + savedOrder.getId());
                     }, error -> {
-                        System.err.println("Error al procesar el pedido: " + error.getMessage());
-                        // Maneja el fallo del pedido"order" y lo almacena en Redis para reintentos
+                        System.err.println("Error processing the order: " + error.getMessage());
+                        // Handles failed orders and stores the message in Redis for retry
                         handleFailedOrder(orderMessage, message);
                     });
         } catch (Exception e) {
-            System.err.println("Error al procesar el mensaje: " + e.getMessage());
+            System.err.println("Error processing the message: " + e.getMessage());
         }
     }
-     /**
-     * handleFailedOrder: Este método maneja los pedidos fallidos. Incrementa el número 
-     * de intentos en Redis y, si se alcanza el máximo de intentos, deja de procesar el pedido.
-     * @param orderMessage El pedido que falló al procesarse.
-     * @param originalMessage El mensaje original recibido de Kafka.
-     */
-    private void handleFailedOrder(OrderMessage orderMessage, String originalMessage) {
-        redisFailureService.getAttemptCount(orderMessage.getOrderId())
-                .defaultIfEmpty(0)
-                .flatMap(attempt -> {
-                    int newAttempt = attempt + 1;
-                    if (newAttempt >= 3) {
-                        System.err.println("Máximo de intentos alcanzado para el pedido: " + orderMessage.getOrderId());
-                        return Mono.empty();
-                    } else {
-                        return redisFailureService.storeFailedMessage(orderMessage.getOrderId(), originalMessage,
-                                newAttempt);
-                    }
-                }).subscribe();
-    }
-}
+
+    /**
+     * handleFailedOrder: This method handles failed order processing attempts.
+     * It increments the attempt count in Redis, and if the max number of attempts is reached,
+     * it stops retrying the order.
+     * 
+     * @param orderMessage The order that failed to process.
