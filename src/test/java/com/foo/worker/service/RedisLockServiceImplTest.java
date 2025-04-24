@@ -2,6 +2,7 @@ package com.foo.worker.service;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -13,13 +14,22 @@ import org.springframework.data.redis.core.ReactiveValueOperations;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+/**
+ * Unit tests for RedisLockServiceImpl using Mockito and StepVerifier.
+ *
+ * This test class validates:
+ * - Successful and unsuccessful lock acquisition
+ * - Successful and unsuccessful lock release
+ *
+ * Author: Freyder Otalvaro
+ */
 public class RedisLockServiceImplTest {
 
- @Mock
+    @Mock
     private ReactiveRedisTemplate<String, String> redisTemplate;
 
     @Mock
-    private ReactiveValueOperations<String, String> valueOperations; // Mock para opsForValue()
+    private ReactiveValueOperations<String, String> valueOperations; // Mock for opsForValue()
 
     @InjectMocks
     private RedisLockServiceImpl redisLockService;
@@ -28,13 +38,13 @@ public class RedisLockServiceImplTest {
     public void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        // Simular que opsForValue() retorna valueOperations
+        // Simulate that opsForValue() returns the mocked valueOperations
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     }
 
     @Test
     public void testAcquireLock_Successful() {
-        // Simular que el lock fue adquirido correctamente
+        // Simulate successful lock acquisition
         when(valueOperations.setIfAbsent(any(String.class), any(String.class))).thenReturn(Mono.just(true));
         when(redisTemplate.expire(any(String.class), any())).thenReturn(Mono.just(true));
 
@@ -45,7 +55,7 @@ public class RedisLockServiceImplTest {
 
     @Test
     public void testAcquireLock_Unsuccessful() {
-        // Simular que el lock no fue adquirido
+        // Simulate lock not acquired
         when(valueOperations.setIfAbsent(any(String.class), any(String.class))).thenReturn(Mono.just(false));
 
         StepVerifier.create(redisLockService.acquireLock("order-123"))
@@ -55,8 +65,8 @@ public class RedisLockServiceImplTest {
 
     @Test
     public void testReleaseLock_Successful() {
-        // Simular que el lock fue liberado correctamente
-        when(redisTemplate.delete(any(String.class))).thenReturn(Mono.just(1L)); // 1L indica que la clave fue eliminada
+        // Simulate successful lock release
+        when(redisTemplate.delete(any(String.class))).thenReturn(Mono.just(1L)); // 1L means key was deleted
 
         StepVerifier.create(redisLockService.releaseLock("order-123"))
                 .expectNext(true)
@@ -65,12 +75,11 @@ public class RedisLockServiceImplTest {
 
     @Test
     public void testReleaseLock_Unsuccessful() {
-        // Simular que el lock no fue liberado
-        when(redisTemplate.delete(any(String.class))).thenReturn(Mono.just(0L)); // 0L indica que no se eliminó ninguna clave
+        // Simulate lock not released
+        when(redisTemplate.delete(any(String.class))).thenReturn(Mono.just(0L)); // 0L means no key was deleted
 
         StepVerifier.create(redisLockService.releaseLock("order-123"))
                 .expectNext(false)
                 .verifyComplete();
     }
-
 }
