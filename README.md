@@ -1,4 +1,7 @@
-# 📢 Order Worker Service
+# 📌 Order Worker Service
+
+> 📢 This project is now fully documented in English.  
+> For the original version in Spanish, switch to the [`main`](https://github.com/FooandV/worker/tree/main) branch.
 
 Reactive microservice built with Spring WebFlux, Kafka, Redis, and MongoDB for real-time order processing and enrichment using external Go APIs.
 
