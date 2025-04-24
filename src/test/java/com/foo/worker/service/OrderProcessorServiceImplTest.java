@@ -17,6 +17,17 @@ import com.foo.worker.models.ProductDetails;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+/**
+ * Unit tests for OrderProcessorServiceImpl using Mockito and StepVerifier.
+ * 
+ * These tests validate different scenarios:
+ * - Successful order processing
+ * - Inactive customer
+ * - Product not found
+ * - Lock not acquired
+ * 
+ * Author: Freyder Otalvaro
+ */
 public class OrderProcessorServiceImplTest {
 
     @Mock
@@ -37,25 +48,21 @@ public class OrderProcessorServiceImplTest {
     public void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        // Crear un pedido de prueba
+        // Create a test order
         orderMessage = new OrderMessage();
         orderMessage.setOrderId("order-123");
         orderMessage.setCustomerId("customer-456");
 
-        // Datos de prueba
-        CustomerDetails customerDetails = new CustomerDetails("customer-456",
-                                                               "John Doe", "john.doe@example.com",
-                                                               true);
-        ProductDetails productDetails = new ProductDetails("product-789",
-                                                            "Laptop", 
-                                                            "Una laptop potente", 999.99);
+        // Test data
+        CustomerDetails customerDetails = new CustomerDetails("customer-456", "John Doe", "john.doe@example.com", true);
+        ProductDetails productDetails = new ProductDetails("product-789", "Laptop", "High-performance laptop", 999.99);
 
-        // Simulaciones
+        // Mock behavior
         when(enrichmentService.enrichCustomerWithResilience(any(OrderMessage.class))).thenReturn(Mono.just(customerDetails));
         when(enrichmentService.enrichProductWithResilience(any(OrderMessage.class))).thenReturn(Mono.just(productDetails));
         when(redisLockService.acquireLock(any(String.class))).thenReturn(Mono.just(true));
 
-        // Guardar en MongoDB
+        // Simulate saving in MongoDB
         Order order = new Order();
         order.setOrderId("order-123");
         when(orderStorageService.saveOrder(any(Order.class))).thenReturn(Mono.just(order));
@@ -63,41 +70,43 @@ public class OrderProcessorServiceImplTest {
 
     @Test
     public void testProcessOrder_Successful() {
-        // Verificar que el pedido se procese correctamente y se guarde en MongoDB
+        // Verify that the order is successfully processed and stored
         StepVerifier.create(orderProcessorService.processOrder(orderMessage))
                 .expectNextMatches(order -> order.getOrderId().equals("order-123"))
                 .verifyComplete();
     }
+
     @Test
     public void testProcessOrder_CustomerInactive() {
-        // Configurar el cliente inactivo
+        // Simulate an inactive customer
         CustomerDetails inactiveCustomer = new CustomerDetails("customer-456", "John Doe", "john.doe@example.com", false);
         when(enrichmentService.enrichCustomerWithResilience(any(OrderMessage.class))).thenReturn(Mono.just(inactiveCustomer));
 
-        // Verificar que el proceso falle debido a un cliente inactivo
+        // Expect failure due to inactive customer
         StepVerifier.create(orderProcessorService.processOrder(orderMessage))
-                .expectErrorMatches(throwable -> throwable instanceof RuntimeException && throwable.getMessage().equals("Cliente inactivo"))
+                .expectErrorMatches(throwable -> throwable instanceof RuntimeException && throwable.getMessage().equals("Inactive customer"))
                 .verify();
     }
+
     @Test
     public void testProcessOrder_ProductNotFound() {
-        // Configurar el producto como no encontrado
-        when(enrichmentService.enrichProductWithResilience(any(OrderMessage.class))).thenReturn(Mono.error(new RuntimeException("Producto no encontrado")));
+        // Simulate product not found
+        when(enrichmentService.enrichProductWithResilience(any(OrderMessage.class))).thenReturn(Mono.error(new RuntimeException("Product not found")));
 
-        // Verificar que el proceso falle debido a que no se encuentra el producto
+        // Expect failure due to missing product
         StepVerifier.create(orderProcessorService.processOrder(orderMessage))
-                .expectErrorMatches(throwable -> throwable instanceof RuntimeException && throwable.getMessage().equals("Producto no encontrado"))
+                .expectErrorMatches(throwable -> throwable instanceof RuntimeException && throwable.getMessage().equals("Product not found"))
                 .verify();
     }
+
     @Test
     public void testProcessOrder_LockNotAcquired() {
-        // Configurar el lock como no adquirido
+        // Simulate lock not acquired
         when(redisLockService.acquireLock(any(String.class))).thenReturn(Mono.just(false));
 
-        // Verificar que el proceso falle debido a que no se puede adquirir el lock
+        // Expect failure due to lock acquisition failure
         StepVerifier.create(orderProcessorService.processOrder(orderMessage))
-                .expectErrorMatches(throwable -> throwable instanceof RuntimeException && throwable.getMessage().equals("Pedido ya está siendo procesado"))
+                .expectErrorMatches(throwable -> throwable instanceof RuntimeException && throwable.getMessage().equals("Order is already being processed"))
                 .verify();
     }
-
 }
