@@ -11,6 +11,13 @@ import org.springframework.data.mongodb.core.index.ReactiveIndexOperations;
 
 import com.foo.worker.models.Order;
 
+/**
+ * Configuration class responsible for creating MongoDB indexes
+ * on the "orders" collection when the application is ready.
+ * 
+ * This improves query performance on frequently accessed fields
+ * such as "orderId" and "customerId".
+ */
 @Configuration
 public class MongoIndexConfig {
 
@@ -21,19 +28,19 @@ public class MongoIndexConfig {
     public void createIndexes() {
         ReactiveIndexOperations indexOps = reactiveMongoTemplate.indexOps(Order.class);
 
-        // Crear índice en el campo "orderId" de la colección en Mongo "orders"
+        // Create an index on the "orderId" field of the "orders" collection
         indexOps.ensureIndex(new Index().on("orderId", Sort.Direction.ASC))
-                .doOnSuccess(success -> System.out.println("Índice creado para orderId."))
-                .doOnError(error -> System.err.println("Error creando índice para orderId: " + error.getMessage()))
+                .doOnSuccess(success -> System.out.println("Index created for orderId."))
+                .doOnError(error -> System.err.println("Error creating index for orderId: " + error.getMessage()))
                 .subscribe();
 
-        // Crear índice en el campo "customerId" de la colección en Mongo "orders"
+        // Create an index on the "customerId" field of the "orders" collection
         indexOps.ensureIndex(new Index().on("customerId", Sort.Direction.ASC))
-                .doOnSuccess(success -> System.out.println("Índice creado para customerId."))
-                .doOnError(error -> System.err.println("Error creando índice para customerId: " + error.getMessage()))
+                .doOnSuccess(success -> System.out.println("Index created for customerId."))
+                .doOnError(error -> System.err.println("Error creating index for customerId: " + error.getMessage()))
                 .subscribe();
 
-        System.out.println("Índices creados en MongoDB.");
+        System.out.println("Indexes created in MongoDB.");
     }
 
 }
