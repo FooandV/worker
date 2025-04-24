@@ -8,10 +8,9 @@ import java.util.List;
 import lombok.Data;
 
 /**
- * La clase Order representa un pedido procesado que será almacenado en MongoDB.
- * Esta clase se utiliza después de que los datos del pedido han sido
- * enriquecidos con información detallada del cliente y de los productos
- * obtenidos a través de las APIs externas desarrolladas en Go.
+ * The Order class represents a processed order that will be stored in MongoDB.
+ * This class is used after the order data has been enriched with detailed
+ * customer and product information retrieved from external Go-based APIs.
  */
 @Data
 @Document(collection = "orders")
